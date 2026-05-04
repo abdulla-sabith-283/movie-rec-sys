@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MovieHub - Movie Recommendation System</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- NAV -->
+    <nav id="navbar">
+      <div class="nav-inner">
+        <a href="#" class="logo" onclick="showPage('home')">
+          <span class="logo-icon">🎬</span> MovieHub
+        </a>
+        <div class="nav-links" id="nav-links">
+          <a href="#" onclick="showPage('home')">Browse</a>
+          <a href="#" onclick="requireAuth('recommendations')">For You</a>
+          <a href="#" onclick="requireAuth('watchlist')">Watchlist</a>
+          <a href="#" onclick="requireAuth('history')">History</a>
+          <a href="#" id="admin-link" style="display:none" onclick="showPage('admin')">Admin</a>
+        </div>
+        <div class="nav-actions">
+          <div id="auth-buttons">
+            <button class="btn btn-ghost" onclick="showModal('login-modal')">Login</button>
+            <button class="btn btn-primary" onclick="showModal('register-modal')">Sign Up</button>
+          </div>
+          <div id="user-menu" style="display:none">
+            <span id="user-name-display"></span>
+            <button class="btn btn-ghost" onclick="logout()">Logout</button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- PAGES -->
+    <div id="pages">
+
+      <!-- HOME PAGE -->
+      <div id="page-home" class="page active">
+        <div class="hero">
+          <div class="hero-content">
+            <h1>Discover Your Next<br><span class="gradient-text">Favourite Film</span></h1>
+            <p>Personalised movie recommendations based on your taste and mood.</p>
+            <div class="search-bar">
+              <input type="text" id="search-input" placeholder="Search movies..." oninput="debounceSearch()" />
+              <button class="btn btn-primary" onclick="doSearch()">Search</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="container">
+          <!-- Filters -->
+          <div class="filters-row">
+            <select id="filter-genre" onchange="applyFilters()">
+              <option value="">All Genres</option>
+            </select>
+            <select id="filter-language" onchange="applyFilters()">
+              <option value="">All Languages</option>
+              <option value="en">English</option>
+              <option value="ko">Korean</option>
+              <option value="ja">Japanese</option>
+              <option value="fr">French</option>
+              <option value="es">Spanish</option>
+            </select>
+            <select id="filter-year" onchange="applyFilters()">
+              <option value="">All Years</option>
+            </select>
+            <select id="filter-sort" onchange="applyFilters()">
+              <option value="rating">Top Rated</option>
+              <option value="year">Newest</option>
+              <option value="title">A-Z</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
+          </div>
+
+          <!-- Mood filter -->
+          <div class="mood-row">
+            <span class="mood-label">Mood:</span>
+            <div class="mood-chips" id="mood-chips"></div>
+          </div>
+
+          <div id="movies-grid" class="movies-grid"></div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+
+      <!-- RECOMMENDATIONS PAGE -->
+      <div id="page-recommendations" class="page">
+        <div class="container">
+          <div class="page-header">
+            <h2>Recommended For You</h2>
+            <p id="rec-algo-label" class="algo-label"></p>
+          </div>
+          <div class="mood-row">
+            <span class="mood-label">Filter by Mood:</span>
+            <div class="mood-chips" id="rec-mood-chips"></div>
+            <button class="btn btn-ghost btn-sm" onclick="loadRecommendations(null)" style="margin-left:8px">All</button>
+          </div>
+          <div id="rec-grid" class="movies-grid"></div>
+        </div>
+      </div>
+
+      <!-- WATCHLIST PAGE -->
+      <div id="page-watchlist" class="page">
+        <div class="container">
+          <div class="page-header">
+            <h2>My Watchlist</h2>
+            <p>Movies you plan to watch</p>
+          </div>
+          <div id="watchlist-grid" class="movies-grid"></div>
+        </div>
+      </div>
+
+      <!-- HISTORY PAGE -->
+      <div id="page-history" class="page">
+        <div class="container">
+          <div class="page-header">
+            <h2>Watch History</h2>
+            <p>Movies you've viewed</p>
+          </div>
+          <div id="history-grid" class="movies-grid"></div>
+        </div>
+      </div>
+
+      <!-- MOVIE DETAIL PAGE -->
+      <div id="page-movie-detail" class="page">
+        <div id="movie-detail-content"></div>
+      </div>
+
+      <!-- ADMIN PAGE -->
+      <div id="page-admin" class="page">
+        <div class="container">
+          <div class="page-header">
+            <h2>Admin Dashboard</h2>
+          </div>
+          <div class="admin-tabs">
+            <button class="tab-btn active" onclick="adminTab('stats')">Stats</button>
+            <button class="tab-btn" onclick="adminTab('reviews')">Reviews</button>
+            <button class="tab-btn" onclick="adminTab('users')">Users</button>
+          </div>
+          <div id="admin-stats" class="admin-section">
+            <div id="stats-cards" class="stats-grid"></div>
+          </div>
+          <div id="admin-reviews" class="admin-section" style="display:none">
+            <div id="reviews-table"></div>
+          </div>
+          <div id="admin-users" class="admin-section" style="display:none">
+            <div id="users-table"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /pages -->
+
+    <!-- MODALS -->
+    <div id="modal-backdrop" onclick="closeModals()"></div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+      <div class="modal-header">
+        <h3>Welcome Back</h3>
+        <button class="modal-close" onclick="closeModals()">✕</button>
+      </div>
+      <form onsubmit="doLogin(event)">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="Password" required />
+        </div>
+        <div id="login-error" class="form-error" style="display:none"></div>
+        <button type="submit" class="btn btn-primary btn-full">Login</button>
+        <p class="modal-switch">Don't have an account? <a href="#" onclick="switchModal('register-modal')">Sign Up</a></p>
+      </form>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="register-modal" class="modal">
+      <div class="modal-header">
+        <h3>Create Account</h3>
+        <button class="modal-close" onclick="closeModals()">✕</button>
+      </div>
+      <form onsubmit="doRegister(event)">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="reg-name" placeholder="Your name" required />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="reg-password" placeholder="Min 8 chars, 1 number, 1 special" required />
+          <small>At least 8 characters, 1 number, 1 special character</small>
+        </div>
+        <div id="reg-error" class="form-error" style="display:none"></div>
+        <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        <p class="modal-switch">Already have an account? <a href="#" onclick="switchModal('login-modal')">Login</a></p>
+      </form>
+    </div>
+
+    <!-- Rating Modal -->
+    <div id="rating-modal" class="modal">
+      <div class="modal-header">
+        <h3>Rate This Movie</h3>
+        <button class="modal-close" onclick="closeModals()">✕</button>
+      </div>
+      <div id="rating-movie-title" style="margin-bottom:16px;font-weight:600;"></div>
+      <div class="star-rating" id="star-rating">
+        <span class="star" data-v="1" onclick="setStarRating(1)">★</span>
+        <span class="star" data-v="2" onclick="setStarRating(2)">★</span>
+        <span class="star" data-v="3" onclick="setStarRating(3)">★</span>
+        <span class="star" data-v="4" onclick="setStarRating(4)">★</span>
+        <span class="star" data-v="5" onclick="setStarRating(5)">★</span>
+      </div>
+      <div class="form-group" style="margin-top:16px;">
+        <label>Review (optional)</label>
+        <textarea id="rating-review" rows="3" placeholder="Share your thoughts..."></textarea>
+      </div>
+      <div id="rating-error" class="form-error" style="display:none"></div>
+      <button class="btn btn-primary btn-full" onclick="submitRating()">Submit Rating</button>
+    </div>
+
+  </div><!-- /app -->
+
+  <script src="/app.js"></script>
+</body>
+</html>
