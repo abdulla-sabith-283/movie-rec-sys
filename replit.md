@@ -13,8 +13,13 @@ A full-stack movie recommendation web application built with Flask (Python backe
 
 - User registration & login with JWT authentication (strong password validation)
 - Browse movies with filters: genre, language, year, sort, mood
-- Movie detail page with cast, synopsis, streaming platforms, similar movies
-- Personalised recommendations (genre-based + mood-based)
+- Movie detail page with cast, synopsis, streaming platforms, ML similar movies
+- **ML Recommendation Engine** (see ml_engine.py):
+  - **Hybrid** (60% CF + 40% content) — when user has ratings & other users exist
+  - **Collaborative Filtering** — user-item matrix + cosine similarity between users
+  - **Content-Based** — TF-IDF (genre/cast/synopsis/mood) + cosine similarity
+  - **Mood-Based** — genre mapping from selected mood
+  - **Popularity fallback** — cold-start (new users)
 - Watchlist management (add/remove)
 - Watch history tracking
 - Movie ratings & reviews (1-5 stars)
@@ -25,6 +30,7 @@ A full-stack movie recommendation web application built with Flask (Python backe
 ```
 app.py              # Flask app entry point
 database.py         # SQLAlchemy models (User, Movie, Rating, Watchlist, History, Recommendation)
+ml_engine.py        # ML recommendation engine (TF-IDF, cosine similarity, collaborative filtering)
 seed.py             # Seed data (20 movies + admin user)
 routes/
   auth.py           # /api/auth/* — register, login, me

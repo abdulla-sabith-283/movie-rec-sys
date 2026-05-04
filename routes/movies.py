@@ -100,10 +100,17 @@ def get_movie(movie_id):
         'created_at': r.created_at.isoformat()
     } for r in reviews]
 
-    similar = Movie.query.filter(
-        Movie.genre.ilike(f'%{movie.genre.split(",")[0].strip()}%'),
-        Movie.movie_id != movie_id
-    ).order_by(Movie.tmdb_rating.desc()).limit(6).all()
+    # Use ML content-based similar movies
+    from ml_engine import similar_movies_content
+    try:
+        all_movies = Movie.query.all()
+        similar = similar_movies_content(movie_id, all_movies, top_n=6)
+    except Exception:
+        similar = Movie.query.filter(
+            Movie.genre.ilike(f'%{movie.genre.split(",")[0].strip()}%'),
+            Movie.movie_id != movie_id
+        ).order_by(Movie.tmdb_rating.desc()).limit(6).all()
+
     data['similar_movies'] = [movie_to_dict(m, user_id) for m in similar]
 
     if user_id:

@@ -297,6 +297,35 @@ td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
 tr:last-child td { border-bottom: none; }
 .flagged-row { background: rgba(255,77,109,0.06); }
 
+/* ML ALGO BAR */
+.algo-bar {
+  margin-top: 8px; padding: 12px 18px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); display: inline-block;
+}
+.algo-badge-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.algo-icon { font-size: 1.2rem; }
+.algo-name { font-weight: 700; color: var(--primary); font-size: 0.95rem; }
+.algo-desc { color: var(--text-muted); font-size: 0.82rem; }
+
+/* ML EXPLAINER */
+.ml-explainer { margin-bottom: 8px; }
+.ml-cards { display: flex; gap: 12px; flex-wrap: wrap; }
+.ml-card {
+  flex: 1; min-width: 140px; max-width: 220px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  transition: all 0.2s; cursor: default;
+}
+.ml-card.active {
+  border-color: var(--primary);
+  background: rgba(108,99,255,0.1);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.ml-card-icon { font-size: 1.4rem; margin-bottom: 6px; }
+.ml-card-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 4px; }
+.ml-card-desc { color: var(--text-muted); font-size: 0.78rem; line-height: 1.4; }
+
 /* EMPTY STATE */
 .empty-state {
   text-align: center; padding: 80px 24px; color: var(--text-muted);

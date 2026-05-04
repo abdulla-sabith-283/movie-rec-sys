@@ -1,58 +1,27 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from database import db, Movie, Rating, History, Watchlist
-from sqlalchemy import func
+from database import db, Movie, Rating, History
+from ml_engine import hybrid_recommend, mood_recommend, similar_movies_content
+import logging
 
+logger = logging.getLogger(__name__)
 recommendations_bp = Blueprint('recommendations', __name__)
 
-def genre_based_recommendations(user_id, limit=10):
-    rated = db.session.query(Rating.movie_id).filter_by(user_id=user_id).all()
-    watched = db.session.query(History.movie_id).filter_by(user_id=user_id).all()
-    seen_ids = set([r[0] for r in rated] + [h[0] for h in watched])
 
-    if not seen_ids:
-        movies = Movie.query.order_by(Movie.tmdb_rating.desc()).limit(limit).all()
-        return movies, 'popular'
-
-    genres = set()
-    for movie_id in seen_ids:
-        m = Movie.query.get(movie_id)
-        if m:
-            for g in m.genre.split(','):
-                genres.add(g.strip())
-
-    candidates = Movie.query.filter(
-        ~Movie.movie_id.in_(seen_ids)
-    ).all()
-
-    scored = []
-    for m in candidates:
-        score = 0
-        for g in m.genre.split(','):
-            if g.strip() in genres:
-                score += 1
-        score += m.tmdb_rating / 10
-        scored.append((m, score))
-
-    scored.sort(key=lambda x: x[1], reverse=True)
-    return [m for m, s in scored[:limit]], 'genre-based'
-
-def mood_based_recommendations(mood, user_id=None, limit=10):
-    mood_genre_map = {
-        'Happy': 'Comedy',
-        'Thriller': 'Thriller',
-        'Romantic': 'Romance',
-        'Sad': 'Drama',
-        'Action': 'Action',
-        'Family': 'Family',
-        'Horror': 'Horror',
-        'Comedy': 'Comedy'
+def _movie_dict(m):
+    return {
+        'id': m.movie_id,
+        'title': m.title,
+        'genre': m.genre,
+        'language': m.language,
+        'release_year': m.release_year,
+        'tmdb_rating': m.tmdb_rating,
+        'poster_url': m.poster_url,
+        'synopsis': m.synopsis,
+        'mood_tags': m.mood_tags,
+        'streaming_platforms': m.streaming_platforms,
     }
-    genre = mood_genre_map.get(mood, mood)
-    movies = Movie.query.filter(
-        Movie.genre.ilike(f'%{genre}%') | Movie.mood_tags.ilike(f'%{mood}%')
-    ).order_by(Movie.tmdb_rating.desc()).limit(limit).all()
-    return movies
+
 
 @recommendations_bp.route('/', methods=['GET'])
 @jwt_required()
@@ -60,36 +29,64 @@ def get_recommendations():
     user_id = int(get_jwt_identity())
     mood = request.args.get('mood')
 
+    all_movies = Movie.query.all()
+
     if mood:
-        movies = mood_based_recommendations(mood, user_id)
-        algo = 'mood-based'
-    else:
-        movies, algo = genre_based_recommendations(user_id)
+        movies = mood_recommend(mood, all_movies)
+        return jsonify({
+            'algorithm': f'mood-based ({mood})',
+            'algorithm_type': 'mood',
+            'recommendations': [_movie_dict(m) for m in movies]
+        })
+
+    all_ratings = Rating.query.all()
+    all_history = History.query.all()
+
+    try:
+        movies, algo = hybrid_recommend(
+            user_id=user_id,
+            ratings=all_ratings,
+            history=all_history,
+            all_movies=all_movies,
+            top_n=12
+        )
+    except Exception as e:
+        logger.error(f"ML recommendation error: {e}")
+        movies = sorted(all_movies, key=lambda m: m.tmdb_rating or 0, reverse=True)[:12]
+        algo = 'popular (fallback)'
 
     return jsonify({
         'algorithm': algo,
-        'recommendations': [{
-            'id': m.movie_id,
-            'title': m.title,
-            'genre': m.genre,
-            'release_year': m.release_year,
-            'tmdb_rating': m.tmdb_rating,
-            'poster_url': m.poster_url,
-            'synopsis': m.synopsis,
-            'mood_tags': m.mood_tags,
-        } for m in movies]
+        'algorithm_type': _algo_type(algo),
+        'recommendations': [_movie_dict(m) for m in movies]
     })
+
+
+@recommendations_bp.route('/similar/<int:movie_id>', methods=['GET'])
+def get_similar(movie_id):
+    all_movies = Movie.query.all()
+    try:
+        similar = similar_movies_content(movie_id, all_movies, top_n=6)
+    except Exception as e:
+        logger.error(f"Similar movies error: {e}")
+        similar = Movie.query.filter(Movie.movie_id != movie_id).order_by(Movie.tmdb_rating.desc()).limit(6).all()
+    return jsonify([_movie_dict(m) for m in similar])
+
 
 @recommendations_bp.route('/popular', methods=['GET'])
 def get_popular():
     limit = int(request.args.get('limit', 10))
     movies = Movie.query.order_by(Movie.tmdb_rating.desc()).limit(limit).all()
-    return jsonify([{
-        'id': m.movie_id,
-        'title': m.title,
-        'genre': m.genre,
-        'release_year': m.release_year,
-        'tmdb_rating': m.tmdb_rating,
-        'poster_url': m.poster_url,
-        'synopsis': m.synopsis,
-    } for m in movies])
+    return jsonify([_movie_dict(m) for m in movies])
+
+
+def _algo_type(algo):
+    if 'hybrid' in algo:
+        return 'hybrid'
+    if 'collaborative' in algo:
+        return 'collaborative'
+    if 'content' in algo:
+        return 'content'
+    if 'mood' in algo:
+        return 'mood'
+    return 'popular'

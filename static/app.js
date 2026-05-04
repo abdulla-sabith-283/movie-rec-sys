@@ -454,17 +454,45 @@ async function markWatched(movieId, btn) {
 }
 
 // ── RECOMMENDATIONS ───────────────────────────────────────────────────────────
+const ALGO_META = {
+  hybrid:        { icon: '🔀', label: 'Hybrid ML',           desc: 'Collaborative filtering + content-based (TF-IDF cosine similarity)', card: 'hybrid' },
+  collaborative: { icon: '👥', label: 'Collaborative Filtering', desc: 'User-item matrix — finding people with similar taste', card: 'collaborative' },
+  content:       { icon: '🎯', label: 'Content-Based Filtering', desc: 'TF-IDF cosine similarity on genre, cast & synopsis', card: 'content' },
+  mood:          { icon: '😊', label: 'Mood-Based',          desc: 'Genre mapping from your selected mood', card: 'mood' },
+  popular:       { icon: '📈', label: 'Trending',             desc: 'Top-rated movies — rate more films for personalised picks', card: null },
+};
+
 async function loadRecommendations(mood) {
   const grid = document.getElementById('rec-grid');
-  const label = document.getElementById('rec-algo-label');
   grid.innerHTML = '<div class="loading-center"><div class="spinner"></div></div>';
   const params = mood ? '?mood=' + encodeURIComponent(mood) : '';
   const { ok, data } = await apiFetch('/api/recommendations/' + params);
   if (!ok) { grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px">Failed to load</p>'; return; }
-  if (label) label.textContent = data.algorithm === 'mood-based' ? `Mood: ${mood}` : data.algorithm;
+
+  // Update algorithm display
+  const algoType = data.algorithm_type || 'popular';
+  const meta = ALGO_META[algoType] || ALGO_META.popular;
+  const bar = document.getElementById('rec-algo-bar');
+  const iconEl = document.getElementById('rec-algo-icon');
+  const nameEl = document.getElementById('rec-algo-label');
+  const descEl = document.getElementById('rec-algo-desc');
+  if (bar) {
+    bar.style.display = 'block';
+    iconEl.textContent = meta.icon;
+    nameEl.textContent = meta.label;
+    descEl.textContent = meta.desc;
+  }
+
+  // Highlight active ML card
+  document.querySelectorAll('.ml-card').forEach(c => c.classList.remove('active'));
+  if (meta.card) {
+    const activeCard = document.getElementById('ml-card-' + meta.card);
+    if (activeCard) activeCard.classList.add('active');
+  }
+
   grid.innerHTML = '';
-  if (data.recommendations.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🤖</div><h3>No recommendations yet</h3><p>Watch and rate some movies to get personalised suggestions</p></div>';
+  if (!data.recommendations || data.recommendations.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🤖</div><h3>No recommendations yet</h3><p>Browse and rate a few movies to unlock personalised ML picks</p></div>';
     return;
   }
   data.recommendations.forEach(m => grid.appendChild(createMovieCard(m)));

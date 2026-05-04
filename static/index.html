@@ -93,9 +93,41 @@
         <div class="container">
           <div class="page-header">
             <h2>Recommended For You</h2>
-            <p id="rec-algo-label" class="algo-label"></p>
+            <div id="rec-algo-bar" class="algo-bar" style="display:none">
+              <div class="algo-badge-row">
+                <span id="rec-algo-icon" class="algo-icon"></span>
+                <span id="rec-algo-label" class="algo-name"></span>
+                <span id="rec-algo-desc" class="algo-desc"></span>
+              </div>
+            </div>
           </div>
-          <div class="mood-row">
+
+          <div class="ml-explainer" id="ml-explainer">
+            <div class="ml-cards">
+              <div class="ml-card" id="ml-card-hybrid">
+                <div class="ml-card-icon">🔀</div>
+                <div class="ml-card-title">Hybrid ML</div>
+                <div class="ml-card-desc">Blends collaborative filtering + content similarity for best results</div>
+              </div>
+              <div class="ml-card" id="ml-card-collaborative">
+                <div class="ml-card-icon">👥</div>
+                <div class="ml-card-title">Collaborative</div>
+                <div class="ml-card-desc">Finds users with similar taste and recommends what they loved</div>
+              </div>
+              <div class="ml-card" id="ml-card-content">
+                <div class="ml-card-icon">🎯</div>
+                <div class="ml-card-title">Content-Based</div>
+                <div class="ml-card-desc">TF-IDF + cosine similarity on genre, cast &amp; synopsis</div>
+              </div>
+              <div class="ml-card" id="ml-card-mood">
+                <div class="ml-card-icon">😊</div>
+                <div class="ml-card-title">Mood-Based</div>
+                <div class="ml-card-desc">Maps your mood to matching genres and filters by them</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mood-row" style="margin-top:16px">
             <span class="mood-label">Filter by Mood:</span>
             <div class="mood-chips" id="rec-mood-chips"></div>
             <button class="btn btn-ghost btn-sm" onclick="loadRecommendations(null)" style="margin-left:8px">All</button>
